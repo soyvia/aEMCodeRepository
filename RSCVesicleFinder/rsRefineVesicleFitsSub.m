@@ -138,7 +138,7 @@ switch fittingMode
         end;
         q=isnan(mi1.vesicle.s);  % blank the unfittable vesicles.
         mi1.vesicle.s(q)=0;
-        mi1.vesicle.ok(:,3)=~q;  % unrefinable vesicles are marked 0
+        mi1.vesicle.ok(:,3)=mi1.vesicle.ok(:,1) & ~q;  % unrefinable vesicles are marked 0
         %                 medianS=median(mi1.vesicle.s);
         %                 good=(mi1.vesicle.s>medianS/(1+sAcceptSd)) & (mi1.vesicle.s<(1+sAcceptSd)*medianS)...
         %                     & (mi1.vesicle.r < maxR) & (mi1.vesicle.r > minR);

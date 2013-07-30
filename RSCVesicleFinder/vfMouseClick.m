@@ -11,13 +11,12 @@ function [h, doUpdateDisplay]=vfMouseClick(h)
 %   h.mi.vesicle (element markedVesicleIndex, if changed).
 
 
-nrgn=13;  % size of box, in display pixels, allowed for clicking on
+nrgn=25;  % size of box, in display pixels, allowed for clicking on
           % existing vesicle
-
 p=get(h.axes1,'CurrentPoint');
 n=size(h.rawImage);
-p1=([p(1,1) n(2)-p(1,2)]-1)*h.ds0
-b=get(gcf,'SelectionType') % normal, alt, extend are the 3 buttons.
+p1=([p(1,1) n(2)-p(1,2)]-1)*h.ds0;
+b=get(gcf,'SelectionType'); % normal, alt, extend are the 3 buttons.
 h.changedVesicleIndex=0;   % default
 doUpdateDisplay=false;     % default
 badVes=h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2);
@@ -36,8 +35,9 @@ end;
 % the newVesFlag.
 % 
 vesToSearch=h.mi.vesicle.ok(:,1);
-mi1.vesicle.y(~vesToSearch)=NaN;  % exclude non-vesicles from search
-dists=sqrt((mi1.vesicle.x-p1(1)).^2 + (mi1.vesicle.y-p1(2)).^2);
+ys=h.mi.vesicle.y;
+ys(~vesToSearch)=inf;  % exclude non-vesicles from search
+dists=sqrt((h.mi.vesicle.x-p1(1)).^2 + (ys-p1(2)).^2);
 oldVesFlag=0;  % default is, no vesicle found
 vind=0;
 
@@ -56,7 +56,7 @@ if newVesFlag==oldVesFlag  % nothing to do
     return
 
 elseif oldVesFlag==0  % We're creating a new one
-    if max(h.ccValsScaled(:))==0  % No cross correlation available !! need to initialize
+    if max(h.ccValsScaled(:))==0  % No cross correlation available
         h.markedVesicleIndex=0;  % no new vesicle
         return
     end;
@@ -65,7 +65,7 @@ elseif oldVesFlag==0  % We're creating a new one
     [mxv, i, j]=max2di(rgn);
     disp([mxv i j]);
     if (all([i j]>1) && all([i j]<nrgn) && mxv>0)  % we have a valid maximum
-        disp('Valid maximum');
+% disp('Valid maximum');
         newcoords=h.ds0*([i j]-rctr)+h.ds0*round(p1/h.ds0);  % replace the position
         vind=numel(h.mi.vesicle.x)+1;  % default: add a new vesicle
         h.mi.vesicle.x(vind)=newcoords(1);
@@ -75,17 +75,20 @@ elseif oldVesFlag==0  % We're creating a new one
         p2=max(1,min(p2,n));
         h.mi.vesicle.r(vind)=h.ccRadii(p2(1),p2(2));
         h.mi.vesicle.ok(vind,1)=true;  % extend the array
-        h.mi.vesicle.ok(vind,2)=~badFlag;
-        disp('Adding a vesicle: ');
-        disp(p2);
-        disp(h.mi.vesicle.s(vind))
-        disp(h.mi.vesicle.r(vind))
-        v=meMakeModelVesicles(h.mi,n,vind);
+        h.mi.vesicle.ok(vind,2)=(newVesFlag==1);
+% disp('Adding a vesicle: ');
+% disp(p2);
+% disp(h.mi.vesicle.s(vind))
+% disp(h.mi.vesicle.r(vind))
+        v0=meMakeModelVesicles(h.mi,n,vind,0);
+        v=real(ifftn(fftn(v0).*ifftshift(h.ctf))); % filter by ctf
     else
         v=0;
     end;
 else  % an old vesicle exists, remove it
-    v=meMakeModelVesicles(h.mi,n,vind);
+    v0=meMakeModelVesicles(h.mi,n,vind,0);
+    v=real(ifftn(fftn(v0).*ifftshift(h.ctf))); % filter by ctf
+
     h.mi.vesicle.ok(vind,1:2)=false;  % mark it empty
     if oldVesFlag==1 % remove from the good image
         h.goodVesImage=h.goodVesImage-v;
@@ -106,4 +109,4 @@ end;
 
 h.markedVesicleIndex=vind; 
 doUpdateDisplay=true;
-    
+disp('mc'); 

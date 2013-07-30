@@ -1,6 +1,6 @@
-function [mi, state]=rsFindVesicles3(m,mi,rPars)
+function [mi, state]=rsFindVesicles3(m,mi,rPars,findInMask)
 
-% [mi t]=meFindVesicles3(m, mi, rPars, h.mask)          --initialize vesicle finder
+% [mi t]=meFindVesicles3(m, mi, rPars, findInMask)          --initialize vesicle finder
 % mi = meFindVesicles3('next',maxN,minmaxThresh);  --find up to maxN vesicles.
 % mi = meFindVesicles3(m, mi) -- new image, old parameters
 % meFindVesicles('end');      --deallocates the persistent variables.
@@ -57,6 +57,7 @@ if isnumeric(m)  % we are initializing the finder.
     % Get the mask, pad it to the search size
     t.mask=zeros(ns);
     t.mask(1:ns0(1),1:ns0(2))=meGetMask(mi,ns0);
+    t.findInMask=findInMask;
     
     %%
     
@@ -132,8 +133,11 @@ if isnumeric(m)  % we are initializing the finder.
         imacs(t.ccmx.*t.mask);
         drawnow;
     end;
-    
-    t.ccmx2=t.ccmx.*t.mask;
+    if findInMask
+        t.ccmx2=t.ccmx;
+    else
+        t.ccmx2=t.ccmx.*t.mask;
+    end;
     %     t.mask=eMask;
     
     if displayOn
@@ -185,6 +189,7 @@ else % m is a string
                     if fracMasked<maxFracMasked && ampi>thresh(1)*fracMasked
                         flag=single((fracMasked<.01) && (refri>=t.rmin)...
                          && (refri<=t.rmax) && ampi>thresh(1)/(1-fracMasked));  % in bounds: flag=1.
+                        flag=flag & t.mask(jx,jy);
                         t.nfound=t.nfound+1;
                         t.mi.vesicle.r(t.nfound,1)=refri*t.ds;
                         t.mi.vesicle.x(t.nfound,1)=(jx-1)*t.ds+1;

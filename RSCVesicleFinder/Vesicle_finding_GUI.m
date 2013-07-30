@@ -22,7 +22,7 @@ function varargout = Vesicle_finding_GUI(varargin)
 
 % Edit the above text to modify the response to help Vesicle_finding_GUI
 
-% Last Modified by GUIDE v2.5 04-Sep-2012 15:16:31
+% Last Modified by GUIDE v2.5 29-Jul-2013 19:16:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -97,6 +97,7 @@ h.filtImage=single(0);  % rawImage after low and high pass filtering
 % h.rawVesImage=single(0);
 h.goodVesImage=single(0);
 h.badVesImage=single(0);
+h.ctf=single(0);
 h.filtVesImage=single(0);
 h.ccVals=0;     % values of cc maxima
 h.ccValsScaled=0;
@@ -112,7 +113,9 @@ h.miOriginal=struct;
 h.automaskOn=false;
 h.varianceMap=single(0);
 h.axes1ButtonDown=false;
-
+h.markedVesicleIndex=0;
+h.findInMask=1;
+h.eraseOldPicks=1;
 h.borderFraction=256;  % relative size of merged-image border is 1/256 ------------
 
 
@@ -164,6 +167,8 @@ set(h.edit_RadiusStep,'String',sprintf('%d',h.sav.vesicleRadii(3)));
 set(h.edit_Highpass,'string',num2str(h.sav.filterFreqs(1)));
 set(h.edit_Lowpass,'string',num2str(h.sav.filterFreqs(2)));
 
+set(h.FindInMaskButton,'value',h.findInMask);
+set(h.EraseOldPicksButton,'value',h.findInMask);
 
 h.output = hObject;
 h.altBasePath='';  % mi.basePath value if the original one doesn't work.
@@ -204,7 +209,12 @@ if isfield(h.mi,'mask')&&(numel(h.mi.mask)>h.maskIndex)
     h.mi.mask=h.mi.mask(1:h.maskIndex);
 end;
 % mi=h.mi;
-mi=rsMergeVesicleList2(h.mi,h.miOriginal);
+if h.eraseOldPicks
+    h.mi.particle.picks=[];
+    mi=h.mi;
+else
+    mi=rsMergeVesicleList2(h.mi,h.miOriginal);
+end;
 fileName=[h.sav.baseName 'mi.mat'];
 outName=[h.sav.fullInfoPath fileName];
 disp(['Saving: ' outName]);
@@ -244,33 +254,12 @@ mi=mi.mi;
 set(h.FileNameText,'String',fileName);
 h.sav.baseName=nm(1:numel(nm)-2);  % delete the 'mi'
 
-% update the vesicle info to the canonical nv x 4 logical matrix
-nv=numel(mi.vesicle.x);
-if (~isfield(mi.vesicle,'ok')...
-    && size(mi.vesicle.ok,1)==nv)
-    mi.vesicle.ok=true(nv,1);
-end;
-if size(mi.vesicle.ok,2)<4
-    mi.vesicle.ok(nv,4)=false;  % extend the array
-end;
 
 [h, ok]=GetImageFile(mi,h);
 if ~ok
     h.imageLoaded=false;
     return
 end;
-
-t=mi.mergeMatrix;
-msk=meMakeMergedImageMask(mi.imageSize/4,t,mi.imageSize/(4*h.borderFraction));
-mi=meInsertMask(msk,mi,1);
-
-%     Point to the end of the stack
-h.maskIndex=numel(mi.mask);
-h.miOriginal=mi;
-h.mi=mi;
-h.sav.basePath=mi.basePath;
-h.ccVals=0;
-h.ccRadii=0;
 
 h=InitDisplay(h);
 guidata(hObject, h);
@@ -280,6 +269,19 @@ end
 
 function [h ok]=GetImageFile(mi,h)
 % Look for a merged image file.
+
+
+% update the vesicle info to the canonical nv x 4 logical matrix
+nv=numel(mi.vesicle.x);
+if (~isfield(mi.vesicle,'ok')...
+        && size(mi.vesicle.ok,1)==nv)
+    mi.vesicle.ok=true(nv,1);
+end;
+if size(mi.vesicle.ok,2)<4
+    mi.vesicle.ok(nv,4)=false;  % extend the array
+end;
+
+
 basePath=mi.basePath;
 if ~exist(basePath,'dir')  % Original directory doesn't work, try current dir
     mi.basePath=ParsePath(h.sav.fullInfoPath);
@@ -306,7 +308,7 @@ if ok  % valid filename.  Load it
     h.oldFilterFreqs=[0 0];
     h.sav.basePath=mi.basePath;
     h.baseName=imageBasename;
-%     h.origImage=ReadEMFile(fullImageName)/mi.doses(1);  % normalize by dose.
+    %     h.origImage=ReadEMFile(fullImageName)/mi.doses(1);  % normalize by dose.
     h.origImage=ReadEMFile(fullImageName);
     h.imageLoaded=true;
     h.rawImage=single(0);
@@ -317,6 +319,22 @@ if ok  % valid filename.  Load it
     h.rawVesImage=single(0);
     h.filtVesImage=single(0);
     cla(h.axes3);
+% initialize the mask
+    t=mi.mergeMatrix;
+    msk=meMakeMergedImageMask(mi.imageSize/4,t,mi.imageSize/(4*h.borderFraction));
+    mi=meInsertMask(msk,mi,1);
+%     Point to the end of the stack
+h.maskIndex=numel(mi.mask);
+
+%   Initialize variables
+h.miOriginal=mi;
+h.mi=mi;
+h.sav.basePath=mi.basePath;
+h.ccVals=0;
+h.ccValsScaled=0;
+h.ccRadii=0;
+h.markedVesicleIndex=0;
+
 else
     msgbox(['Can''t find the image ' imageBasename],'ok');
 end;
@@ -340,33 +358,16 @@ disp('Making model vesicles')
 
 [nv, ne]=size(h.mi.vesicle.ok);
 
-    goodVes=all(h.mi.vesicle.ok(:,1:2),2); % vesicles in range
-    badVes=(h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2)); % found, but not in range
-    
-    h.goodVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(goodVes));
-    h.badVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(badVes));
+goodVes=all(h.mi.vesicle.ok(:,1:2),2); % vesicles in range
+badVes=(h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2)); % found, but not in range
 
-    h=UpdateDisplayFiltering(h);
+h.goodVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(goodVes));
+h.badVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(badVes));
+h.ctf=meGetEffectiveCTF(h.mi,size(h.rawImage),h.ds0);
+h=UpdateDisplayFiltering(h);
 % h.displayMode=0;
 h=ShowImage(h);
 % set(h.figure1,'pointer','arrow');
-
-% Draw the scatterplot of existing vesicles
-
-if isfield(h.mi.vesicle,'ok')
-    [nv, ne]=size(h.mi.vesicle.ok);
-    if nv>0 && ne>3
-        goodVes=all(h.mi.vesicle.ok(:,1:2),2); % vesicles in range
-        badVes=(h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2)); % found, but not in range
-            plot(h.axes3,...
-                h.mi.vesicle.r(goodVes)*h.mi.pixA,h.mi.vesicle.s(goodVes),'b.',...
-                h.mi.vesicle.r(badVes)*h.mi.pixA,h.mi.vesicle.s(badVes),'m.',...
-                'markersize',10);
-            title(h.axes3,[num2str(sum(goodVes)) ' vesicles in range']);
-         else
-            title(h.axes3,' '); % clear the title
-    end;
-end;
 
 % Get the figure handle, starting with the axes handle.
 fh=h.axes1;
@@ -382,18 +383,26 @@ set(fh,'keypressfcn',fhndl);
 end
 
 
+
 % UpdateDisplayFiltering
-function h=UpdateDisplayFiltering(h)
+function h=UpdateDisplayFiltering(h,doRawImage)
+if nargin<2
+    doRawImage=1;
+end;
 h.filtImage=h.rawImage;
 h.filtVesImage=h.goodVesImage+h.badVesImage;
 
 fcs=h.sav.filterFreqs*h.pixA;
 if fcs(1)  % highpass freq not zero
-    h.filtImage=GaussHP(h.filtImage,fcs(1));
+    if doRawImage
+        h.filtImage=GaussHP(h.filtImage,fcs(1));
+    end;
     h.filtVesImage=GaussHP(h.filtVesImage,fcs(1));
 end;
 if fcs(2)  % lowpass freq not zero
-    h.filtImage=GaussFilt(h.filtImage,fcs(2));
+    if doRawImage
+        h.filtImage=GaussFilt(h.filtImage,fcs(2));
+    end;
     h.filtVesImage=GaussFilt(h.filtVesImage,fcs(2));
 end;
 h.oldFilterFreqs=h.sav.filterFreqs;
@@ -411,20 +420,28 @@ if h.imageLoaded
     % if numel(h.filtImage)>0  % something has been loaded
     msk=rot90(meGetMask(h.mi,size(h.filtImage),1:h.maskIndex));
     imData=h.filtImage;
-    showGhosts=0;
+    n=size(h.filtImage);
     showMask=1;
     switch h.displayMode
         case 0
             imData=h.filtImage;
+            showGhosts=0;
         case 1
             imData=h.filtImage-h.filtVesImage;
             showGhosts=0;
         case 2
             imData=h.filtImage-h.filtVesImage;
             showGhosts=1;
+        case 3
+            if numel(h.ccValsScaled)>1
+                imData=h.ccValsScaled(1:n(1),1:n(2));
+                showGhosts=1;
+            else
+                return
+            end;
     end;
     theImage =  repmat(rot90(imscale(imData,256,1e-3)),[1 1 3]);
- 
+    
     if showGhosts
         ghostColor=[.7 .7 1];
         ghostColorBad=[1 .5 .35];
@@ -451,16 +468,16 @@ if h.imageLoaded
     axes(h.axes1);
     ih = imshow(uint8(theImage),'InitialMagnification',100);
     if showGhosts % draw the center points of the vesicles
-%         goodCenterColor=[.5 .5 1];
-%         badCenterColor=[1 .5 1];
-if isfield(h.mi.vesicle,'ok') && size(h.mi.vesicle.ok,2)>3
-    badVes=h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2);
-    goodVes=all(h.mi.vesicle.ok(:,1:2),2);
-else
-    badVes=false(numel(h.mi.vesicle.x,1));
-    goodVes=true(numel(h.mi.vesicle.x,1));
-end;
-hold on;
+        %         goodCenterColor=[.5 .5 1];
+        %         badCenterColor=[1 .5 1];
+        if isfield(h.mi.vesicle,'ok') && size(h.mi.vesicle.ok,2)>3
+            badVes=h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2);
+            goodVes=all(h.mi.vesicle.ok(:,1:2),2);
+        else
+            badVes=false(numel(h.mi.vesicle.x,1));
+            goodVes=true(numel(h.mi.vesicle.x,1));
+        end;
+        hold on;
         ny=size(h.rawImage,2);
         hp1=plot(h.mi.vesicle.x(goodVes)/h.ds0+1,...
             ny-(h.mi.vesicle.y(goodVes)/h.ds0),'b.','markersize',10);
@@ -470,6 +487,30 @@ hold on;
         set(hp1,'HitTest','off');
         set(hp2,'HitTest','off');
     end;
+    
+    % Draw the scatterplot of existing vesicles
+    
+    if isfield(h.mi.vesicle,'ok')
+        [nv, ne]=size(h.mi.vesicle.ok);
+        if nv>0 && ne>3
+            goodVes=all(h.mi.vesicle.ok(:,1:2),2); % vesicles in range
+            badVes=(h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2)); % found, but not in range
+            plot(h.axes3,...
+                h.mi.vesicle.r(goodVes)*h.mi.pixA,h.mi.vesicle.s(goodVes),'b.',...
+                h.mi.vesicle.r(badVes)*h.mi.pixA,h.mi.vesicle.s(badVes),'m.',...
+                'markersize',10);
+            if h.markedVesicleIndex>0
+                set(h.axes3,'nextplot','add');
+                plot(h.axes3,h.mi.vesicle.r(h.markedVesicleIndex)*h.mi.pixA,...
+                    h.mi.vesicle.s(h.markedVesicleIndex),'ks','markersize',12);
+                set(h.axes3,'nextplot','replace');
+            end;
+            title(h.axes3,[num2str(sum(goodVes)) ' vesicles in range']);
+        else
+            title(h.axes3,' '); % clear the title
+        end;
+    end;
+    
     fhndl=@(hObject,eventdata) Vesicle_finding_GUI('axes1_ButtonDownFcn',hObject,eventdata,guidata(hObject));
     set(ih,'buttondownfcn',fhndl);
     set(ih,'HitTest','on');
@@ -750,7 +791,7 @@ h.mi.vesicleModel=fuzzymask(nm0,1,thk/pixA/2,rise/pixA)...
 
 rPars=h.sav.vesicleRadii;
 % mi1=rsFindVesicles3(h.origImage, h.mi, rPars);
-mi1=rsFindVesicles3(h.rawImage, h.mi, rPars);
+mi1=rsFindVesicles3(h.rawImage, h.mi, rPars, h.findInMask);
 %%
 minAmp=h.sav.vesicleAmps(1);
 maxAmp=h.sav.vesicleAmps(2);
@@ -774,10 +815,10 @@ while mins>minAmp
     goodVes=all(mi1.vesicle.ok(1:nves,1:2),2);
     badVes=mi1.vesicle.ok(1:nves,1) & ~mi1.vesicle.ok(1:nves,2);
     
-%     plot(h.axes3,mi1.vesicle.r(1:nves)*mi1.pixA,mi1.vesicle.s(1:nves),...
-%         'b.', xs,ys,'r-','markersize',10);
+    %     plot(h.axes3,mi1.vesicle.r(1:nves)*mi1.pixA,mi1.vesicle.s(1:nves),...
+    %         'b.', xs,ys,'r-','markersize',10);
     plot(h.axes3,mi1.vesicle.r(goodVes)*mi1.pixA,mi1.vesicle.s(goodVes),'b.',...
-                 mi1.vesicle.r(badVes)*mi1.pixA,mi1.vesicle.s(badVes),'m.',...
+        mi1.vesicle.r(badVes)*mi1.pixA,mi1.vesicle.s(badVes),'m.',...
         xs,ys,'k-','markersize',10);
     title(nves);
     %     Exit the loop when we can't find any more vesicles
@@ -800,7 +841,9 @@ h.badVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(badVes));
 h.rawVesImage=h.goodVesImage+h.badVesImage;
 % h.rawVesImage=meMakeModelVesicles(h.mi,size(h.rawImage));
 h=UpdateDisplayFiltering(h);
-h.displayMode=1;  % subtract the vesicles
+if h.displayMode==0
+    h.displayMode=1;  % subtract the vesicles
+end;
 ShowImage(h);
 guidata(hObject,h);
 set(hObject,'string','Find');
@@ -816,19 +859,19 @@ end
 % disp('image')
 %     p=get(handles.axes1,'CurrentPoint')
 % end
-% 
-% 
+%
+%
 
 %---------------click on display-----------------
 
 function axes1_ButtonDownFcn(hObject, eventdata, h)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 axesHandle=get(hObject,'parent');
 h=guidata(axesHandle);
-h=vfMouseClick(h);
-h=UpdateDisplayFiltering(h);
+[h, doUpdateDisplay]=vfMouseClick(h);
+if doUpdateDisplay
+    h=UpdateDisplayFiltering(h,false);
+end;
 h=ShowImage(h);
 guidata(axesHandle,h);
 end
@@ -836,18 +879,18 @@ end
 %---------------keystroke------------------------
 % For some reason, user has to click on the figure first for this to work.
 function KeyPressFcn(hObject, eventdata, h)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 figure(gcbf);
-currentChar=get(gcbf,'CurrentCharacter')
-currentPoint=get(gcbf,'CurrentPoint')
-% currentPoint=get(gcf,'CurrentPoint')
-% 
-% h=vfMouseClick(h);
-% h=UpdateDisplayFiltering(h);
-% h=ShowImage(h);
-% guidata(hObject,h);
+char=get(gcbf,'CurrentCharacter');
+switch char
+    case {'d' ' '}
+        h.displayMode=h.displayMode+1;
+        if h.displayMode>2
+            h.displayMode=0;
+        end;
+        h=ShowImage(h);
+end;
+guidata(hObject,h);
+
 end
 
 
@@ -951,13 +994,34 @@ guidata(hObject,h);
 end
 
 
-
-% --- Executes on button press in pushbutton_RefineAll.
-function pushbutton_RefineAll_Callback(hObject, eventdata, h)
-% hObject    handle to pushbutton_RefineAll (see GCBO)
+% --- Executes on button press in FindInMaskButton.
+function FindInMaskButton_Callback(hObject, eventdata, h)
+% hObject    handle to FindInMaskButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% h    structure with h and user data (see GUIDATA)
+% handles    structure with handles and user data (see GUIDATA)
+h.findInMask=1-h.findInMask;
+set(hObject,'Value',h.findInMask);
+guidata(hObject,h);
 end
+% Hint: get(hObject,'Value') returns toggle state of FindInMaskButton
+
+
+% --- Executes on button press in EraseOldPicksButton.
+function EraseOldPicksButton_Callback(hObject, eventdata, h)
+% hObject    handle to EraseOldPicksButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+h.eraseOldPicks=1-h.eraseOldPicks;
+set(hObject,'Value',h.eraseOldPicks);
+guidata(hObject,h);
+end
+
+% Hint: get(hObject,'Value') returns toggle state of EraseOldPicksButton
+
+
+
+
+
 
 
 % --- Executes on key press with focus on pushbutton_AdjustContrast and none of its controls.
@@ -1266,3 +1330,12 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 end
+
+
+% --- Executes on button press in pushbutton22.
+function pushbutton22_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton22 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
+

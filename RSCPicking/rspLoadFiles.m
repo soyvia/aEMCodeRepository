@@ -82,7 +82,7 @@ if size(mi.vesicle.ok,2)<4  % handle old mi files; all ves are good.
     mi.vesicle.ok=repmat(mi.vesicle.ok,1,4);
 else
     goodVes=all(mi.vesicle.ok(:,2:3),2);  % vesicle in range and refined
-    badVes=mi.vesicle.ok(:,3) & ~goodVes; % refined but not in range
+badVes=mi.vesicle.ok(:,1) & ~goodVes; % refined but not in range
     mi2=mi;
     mi2.vesicle.s=0*mi2.vesicle.s+median(mi2.vesicle.s);
     mVesGood=meMakeModelVesicles(mi2,dis.ndis,find(goodVes));
