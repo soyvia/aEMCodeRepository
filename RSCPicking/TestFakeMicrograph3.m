@@ -126,8 +126,8 @@ mi0=mi;
 %%  Final images and display
 mi=mi0;
 nbin=2;
-sigmaN=.4;  % noisy image
-% sigmaN=.6;
+sigmaN=0;  % noisy image is 0.4
+
 if useMask
     msk=meGetMask(mi,n);
 else
