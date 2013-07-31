@@ -30,9 +30,10 @@ for i=2:nsets  % we ignore i=1 which are deleted particles
     dists=hypot(picks(i,1:ptrs(i),1)-coords(1),...
         picks(i,1:ptrs(i),2)-coords(2));
     if numel(dists)<1
-        dists(1:nsets)=inf;
+        dists=inf;
+    else
+        dists(picks(i,:,3)==0)=inf;  % Don't count bad vesicle coords
     end;
-    dists(picks(i,:,3)==0)=inf;
     [minDistances(i), allInds(i)]=min(dists);
 end;
 
@@ -64,7 +65,6 @@ switch clickType
                 coords(5)=single(rscc.mxCC(dsCoords(1),dsCoords(2)));
                 coords(6)=single(rscc.mxTemplInds(dsCoords(1),dsCoords(2)));
                 %                 coords(5)=single(rscc.mxRsos(dsCoords(1),dsCoords(2)));
-                ptrs(2)=ptrs(2)+1;
             else
                 error('Negative coordinates');
             end;

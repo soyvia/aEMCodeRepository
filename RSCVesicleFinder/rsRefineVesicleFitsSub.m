@@ -6,6 +6,7 @@ if nargin<3
     fittingMode=3;
 end;
 maxVesiclesToFit=inf;
+maxMaskLayers=2;   % Don't include any masking beyond merge and beam
 useOkField=1;      % refine every vesicle for which ok is true.
 doDownsampling=1;  % Downsample for speed
 disA=800;          % size of displayed/fitted window in angstroms
@@ -77,7 +78,8 @@ end;
 msub=ms-vs;  % This is the subtracted image we'll use
 
 %         Whiten and mask the subtracted image
-mmask=meGetMask(mi1,ns);
+layers=1:min(maxMaskLayers,numel(mi1.mask));
+mmask=meGetMask(mi1,ns,layers);
 pwH=meGetNoiseWhiteningFilter(mi1,ns);
 msubf=mmask.*real(ifftn(fftn(msub).*ifftshift(pwH)));
 figure(1);
@@ -138,7 +140,7 @@ switch fittingMode
         end;
         q=isnan(mi1.vesicle.s);  % blank the unfittable vesicles.
         mi1.vesicle.s(q)=0;
-        mi1.vesicle.ok(:,3)=mi1.vesicle.ok(:,1) & ~q;  % unrefinable vesicles are marked 0
+        mi1.vesicle.ok(:,3)=mi1.vesicle.ok(:,1) & ~q(:);  % unrefinable vesicles are marked 0
         %                 medianS=median(mi1.vesicle.s);
         %                 good=(mi1.vesicle.s>medianS/(1+sAcceptSd)) & (mi1.vesicle.s<(1+sAcceptSd)*medianS)...
         %                     & (mi1.vesicle.r < maxR) & (mi1.vesicle.r > minR);

@@ -474,8 +474,8 @@ if h.imageLoaded
             badVes=h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2);
             goodVes=all(h.mi.vesicle.ok(:,1:2),2);
         else
-            badVes=false(numel(h.mi.vesicle.x,1));
-            goodVes=true(numel(h.mi.vesicle.x,1));
+            badVes=false(numel(h.mi.vesicle.x),1);
+            goodVes=true(numel(h.mi.vesicle.x),1);
         end;
         hold on;
         ny=size(h.rawImage,2);
@@ -812,9 +812,11 @@ while mins>minAmp
     xs2=rPars(2);
     xs=[xs1    xs1    xs2    xs2    xs1];
     ys=[minAmp maxAmp maxAmp minAmp minAmp];
-    goodVes=all(mi1.vesicle.ok(1:nves,1:2),2);
-    badVes=mi1.vesicle.ok(1:nves,1) & ~mi1.vesicle.ok(1:nves,2);
-    
+    if numel(mi1.vesicle.ok)<4  % not even one row present
+        mi1.vesicle.ok=false(1,4); % make sure there are enough elements
+    end;
+        goodVes=all(mi1.vesicle.ok(1:nves,1:2),2);
+        badVes=mi1.vesicle.ok(1:nves,1) & ~mi1.vesicle.ok(1:nves,2);
     %     plot(h.axes3,mi1.vesicle.r(1:nves)*mi1.pixA,mi1.vesicle.s(1:nves),...
     %         'b.', xs,ys,'r-','markersize',10);
     plot(h.axes3,mi1.vesicle.r(goodVes)*mi1.pixA,mi1.vesicle.s(goodVes),'b.',...
@@ -841,9 +843,7 @@ h.badVesImage=meMakeModelVesicles(h.mi,size(h.rawImage),find(badVes));
 h.rawVesImage=h.goodVesImage+h.badVesImage;
 % h.rawVesImage=meMakeModelVesicles(h.mi,size(h.rawImage));
 h=UpdateDisplayFiltering(h);
-if h.displayMode==0
-    h.displayMode=1;  % subtract the vesicles
-end;
+h.displayMode=2;  % subtract and mark the vesicles
 ShowImage(h);
 guidata(hObject,h);
 set(hObject,'string','Find');
