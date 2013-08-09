@@ -67,6 +67,7 @@ dis.ds=mi.imageSize(1)/dis.ndis;
 
 disp('Downsample');
 rs.mVars=DownsampleGeneral(rscc.mxVars,dis.ndis);
+rs.blanks=DownsampleGeneral(rscc.mxVars==0,dis.ndis);
 rs.mCC=DownsampleGeneral(rscc.mxCC,dis.ndis);
 rs.mVesInds=DownsampleGeneral(rscc.mxVesInds<1,dis.ndis);
 m0=DownsampleGeneral(mc,dis.ndis);
@@ -111,20 +112,24 @@ end;
 rawMask=~meGetMask(mi,dis.ndis);
 
 disp('FilterAndScale');
-imgs=single(zeros(dis.ndis,dis.ndis,7));  % Images for display
+imgs=zeros(dis.ndis,dis.ndis,7,'single');  % Images for display
 imgs(:,:,1:2)=rspFilterAndScaleImages(mi,dis,m0,mVes);
 imgs(:,:,3)=0;  % to receive model picked particles
 imgs(:,:,4)=imscale(rs.mCC,256,1e-3);
 imgs(:,:,5)=imscale(rs.mVars,256,1e-2);
 imgs(:,:,6)=imscale(mVes,256,1e-4);
 imgs(:,:,7)=0;  % to receive overlap mask
-masks=single(zeros(dis.ndis,dis.ndis,3));
+% masks are:  1: good vesicle ghosts;  2: bad vesicle ghosts;
+%             3: variance above thresh 4: blank region
+%             5: vesicle overlap
+masks=zeros(dis.ndis,dis.ndis,5,'single');
 masks(:,:,1)=imscale(max(-mVesGood,0),1,1e-3);
 if any(badVes)
     masks(:,:,2)=imscale(max(-mVesBad,0),1,1e-3);
 end;
 masks(:,:,3)=((rs.mVars>dis.pars(3))|rawMask);
+masks(:,:,4)=rs.blanks;
 
 dis.org=[0 0];
-
+dis.mode=min(2,dis.mode);
 disp('Done.');

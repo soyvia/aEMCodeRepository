@@ -249,20 +249,23 @@ for fileIndex=1:numel(fname); % Operate on a single micrograph
         maskRadii=mic.vesicle.r(i)/ds+membraneOffset*[-1 1 0]+maskPadding;
         maskRadii(3)=maskRadii(3)+abs(membraneOffset)+msklRadius+maskPadding;
         
-        % Get the single-vesicle correlation function
+ % ---------- Get the single-vesicle correlation function here ------------
         [mxVals, mxInds, mxNCC, mxValsV, mxRso, localVar]=...
             rsVesicleCorrelation4(-m2,mic,i,membraneOffset,...
                                   maskRadii,angleInds,eigenSet);
+
+        % Get the distance function for evaluating which is the closest
         localDist=RadiusNorm(size(mxVals));
         ctr=round([mic.vesicle.x(i) mic.vesicle.y(i)]/ds+1);  % shift to 1-based coords
         nv=size(mxVals,1);
         
         % Do a local averaging of the squared CC in the whole vesicle.
-        var=mxVals.^2;
+%         var=mxVals.^2;
+      var=localVar;
         h=ifftshift(Crop(mskl,nv));  % average over the local mask
         filtVar=real(ifftn(fftn(var).*fftn(h))).*fuzzymask(nv,2,max(maskRadii(1:2)),.5);
         
-        %     Pad to the full-sized image
+        %     Pad all the quantities to a full-sized image
         xVals=ExtractImage(mxVals,ctr,n,1);
         xTemplInds=ExtractImage(mxInds,ctr,n,1);
         xVar=ExtractImage(filtVar,ctr,n,1);
@@ -270,9 +273,10 @@ for fileIndex=1:numel(fname); % Operate on a single micrograph
         xNCC=ExtractImage(mxNCC,ctr,n,1);
         xRso=ExtractImage(mxRso, ctr,n,1);
         xDist=Radius(n,ctr);  % Get the distance map too.
-        %       Incorporate into the composite image
+
+        %       Incorporate into the composite images
         q=xVar>mxVars;
-        mxVars(q)=xVar(q);
+        mxVars(q)=xVar(q);  % This is used for the variance criterion in SimpleRSPicker.
         
         q=xDist<=mxDist;  % all points closer to this vesicle than any other
         mxDist(q)=xDist(q);

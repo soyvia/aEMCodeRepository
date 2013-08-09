@@ -1,8 +1,10 @@
 % meUpdateMiFiles13
+% update the mi structure to the version 13 standards.
+% This can involve re-computing the merged images to fix the scaling.
 
 cpe=16
-defaultKV=200;
 ds=2;  % merged iaage downsampling
+defaultKV=200;
 iCamera=1;  % F20 ultrascan
 weights=[1 1 1]
 writeMiFile=1;
@@ -134,6 +136,7 @@ for findex=1:nfiles
             figure(1); clf; SetGrayscale;
             imacs(m);
             title(procname,'interpreter','none');
+            drawnow;
             disp(['Wrote the merged image: ' procname 'm.mrc']);
             nd=round(mi.imageSize/8);
             vd=meMakeModelVesicles(mi,nd);

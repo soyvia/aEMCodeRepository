@@ -11,29 +11,34 @@ function cimg=rspMakeRGB(dis,img,masks)
 % mode (1..5: orig, subtr, ghost, cc, var)
 % ghostColor  (1x3)
 % ghostColorBad
-% 
-[nx ny]=size(img);
+%
+[nx, ny]=size(img);
 
 cfim=repmat(rot90(img),[1 1 3]);  % copy into R G B channels
 
 if dis.showGhosts
-        color=(1-dis.ghostColor)*dis.ghostAmp; % color to subtract for membrane
-        for i=1:3
-            cfim(:,:,i)=cfim(:,:,i).*(1-rot90(masks(:,:,1))*color(i));
-        end;
-        color=(1-dis.ghostColorBad)*dis.ghostAmp; % color for bad vesicle
-        for i=1:3
-            cfim(:,:,i)=cfim(:,:,i).*(1-rot90(masks(:,:,2))*color(i));
-        end;
+    gColor=(1-dis.ghostColor)*dis.ghostAmp; % color to subtract for membrane
+    oColor=(1-dis.overlapColor);
+    for i=1:3
+        cfim(:,:,i)=cfim(:,:,i).*(1-rot90(masks(:,:,1))*gColor(i))...
+                                .*(1-rot90(masks(:,:,5)*oColor(i)));
+    end;
+    bColor=(1-dis.ghostColorBad)*dis.ghostAmp; % color for bad vesicle
+    for i=1:3
+        cfim(:,:,i)=cfim(:,:,i).*(1-rot90(masks(:,:,2))*bColor(i));
+    end;
 end;
 if dis.showMask
-    cimg=uint8(zeros(ny,nx,3));
-    color=(1-dis.maskColor);
-    for i=1:3
-        cimg(:,:,i)=uint8(cfim(:,:,i).*(1-rot90(masks(:,:,3)).*color(i)));
-    end;
+    msk=rot90(masks(:,:,3));
 else
-    cimg=uint8(cfim);
+    msk=zeros(ny,nx,'single');
+end;
+cimg=uint8(zeros(ny,nx,3));
+mColor=(1-dis.maskColor);
+bColor=(1-dis.blankColor);
+for i=1:3 % loop over colors
+    cimg(:,:,i)=uint8(cfim(:,:,i).*(1-msk.*mColor(i))...
+        .*(1-rot90(masks(:,:,4))*bColor(i)));
 end;
 % clip the display coordinates
 dis.org=max(0,dis.org);  % origin is zero-based

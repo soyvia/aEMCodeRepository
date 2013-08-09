@@ -12,7 +12,8 @@ function [ampImg, mxInds, mxNCCImg, mxValsV, mxRso, localVar]=rsVesicleCorrelati
 % mxInds gives the index of the reference giving that value.  filtImg is
 % the image reconstructed from the eigenimages. mxValsV is the same as
 % mxVals except it isn't masked.  mxRso tells whether the best-matching
-% particle orientation is RSO (=1) or ISO (=0).
+% particle orientation is RSO (=1) or ISO (=0).  localVar is the variance
+% computed from the first few terms of the eigenimage expansion.
 
 % To determine the best-matching template at a given maximum of mxVals at
 % image position (i,j), do this:
@@ -24,7 +25,7 @@ function [ampImg, mxInds, mxNCCImg, mxValsV, mxRso, localVar]=rsVesicleCorrelati
 % bestTemplate=xTemplates(:,:,ang,hemi,gamma);
 
 [nterms, nHemi, nGamma, nAngs]=size(eigenSet.vList);
-nVarTerms=nterms;  % number of terms to sum for local variance.
+nVarTerms=min(1,nterms);  % number of terms to sum for local variance.
 nio=2;
 nRefs=nio*nHemi*nGamma;  % number of references to try at each pixel position
 % nHemi is equal to 2.
@@ -67,10 +68,10 @@ pptrs=ptrs(pix,:); % npix x 2, pointers for each active pixel
 
 vArray=zeros(nterms,nio,nHemi,nGamma,npix);
 for i=1:2  % rso/iso
-    vArray(:,i,:,:,:)=eigenSet.vList(:,:,:,pptrs(:,i));
+%     vArray(:,i,:,:,:)=eigenSet.vList(:,:,:,pptrs(:,i));
     vArrayNorm(:,i,:,:,:)=eigenSet.vListNorm(:,:,:,pptrs(:,i));
 end;
-vArray=reshape(vArray,nterms,nRefs,npix);
+% vArray=reshape(vArray,nterms,nRefs,npix);
 vArrayNorm=reshape(vArrayNorm,nterms,nRefs,npix);
 
 paArray=zeros(nio,nHemi,nGamma,npix);
@@ -90,7 +91,7 @@ for i=1:nterms
 end;
 ccVec=reshape(ccs,nt2,nterms);
 ccPix=ccVec(pix,:);  % npix x nterms
-localVarPix=sum(ccPix.^2,2);  % npix x 1: local variance at each pixel
+localVarPix=sum(ccPix(:,1:nVarTerms).^2,2);  % npix x 1: local variance at each pixel
 pixNorm=sqrt(localVarPix);
 ccPixNorm=ccPix./repmat(pixNorm,1,nterms);  % like ccPix, but divided by sigma_img
 

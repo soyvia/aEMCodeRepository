@@ -38,10 +38,12 @@ if ~disOk
         bColorVesicle; bColorManNotRefined; bColorBadVesicle];
     
     % overlay colors
-    dis.maskColor=[.7 .6 .7];
+    dis.maskColor=[.9 .75 .8];
+    dis.blankColor=[1 .85 .8];
+    dis.overlapColor=[.95 .8 1];
     dis.ghostColor=[.7 .7 1];
     dis.ghostColorBad=[1 .7 .6];
-    dis.ghostAmp=1;
+    dis.ghostAmp=.6;
     
     % initial display
     dis.ndis=1024; %%
@@ -149,9 +151,10 @@ while (b~='q') && (b~='Q') % q = quit; Q = quit but return to this image later
                     % Show status in the window title bar
                     set(gcf,'name',[dis.infoName ' - autopicking...']);
                     drawnow;
-                        % Do the autopicking here -----------------------
+                    % ----- Do the autopicking here -----------------------
                     [coords, ovMask, endCC]=rscAutoParticleFinder(mi,rscc,dis.pars);
                     imgs(:,:,7)=150*(ovMask-.5);
+                    masks(:,:,5)=ovMask>1.5;
                     imgs(:,:,8)=imscale(endCC,256);
                     [ptrs(3), ncf]=size(coords);
                     picks(3,1:ptrs(3),1:ncf)=coords;
@@ -184,6 +187,14 @@ while (b~='q') && (b~='Q') % q = quit; Q = quit but return to this image later
             dis.contrast(2)=MyInput('White contrast',dis.contrast(2));
             imgs(:,:,1:2)=rspFilterAndScaleImages(mi,dis,m0,mVes);
             rspUpdateDisplay(mi,dis,imgs,masks,picks,ptrs);
+            
+        case 'C'  % set overlay colors
+             dis.maskColor=MyInput('Mask color',dis.maskColor);
+             dis.blankColor=MyInput('Blank color',dis.blankColor);
+             dis.overlapColor=MyInput('Overlap color',dis.overlapColor);
+             dis.ghostColor=MyInput('Ghost color',dis.ghostColor);
+             dis.ghostColorBad=MyInput('Bad ghost color',dis.ghostColorBad); 
+             rspUpdateDisplay(mi,dis,imgs,masks,picks,ptrs);
             
         case {'d' 'e' 'D'}  % display mode (toggle 1-2, 2-3, 1-end)
             dis.mode=dis.mode+1;

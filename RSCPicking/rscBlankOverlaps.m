@@ -13,6 +13,7 @@ numv=numel(mi.vesicle.x);
 
 ovMask=single(zeros(n));  % We'll mask the CC where msk > 1 due to overlap. 
 for i=1:numv
+    if all(mi.vesicle.ok(i,1:2:3)) % vesicle exists and was fitted
     r1=vesr(i)+ovr;  % r1 = radius + ovr of the ith vesicle
 %     Clip the vesicle coordinates
     x0=max(1,floor(vesx(i)-r1));
@@ -23,6 +24,7 @@ for i=1:numv
 %     Mask a disc of radius r1
     ovMask(x0:x1,y0:y1)=ovMask(x0:x1,y0:y1)+...
         ((lx-vesx(i)).^2+(ly-vesy(i)).^2 <= r1^2);
+    end;
 end;
 % mask the cc function
 ccMax=ccMax.*(ovMask<1.5);

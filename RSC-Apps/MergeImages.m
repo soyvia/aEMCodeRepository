@@ -1,6 +1,6 @@
 % MergeImages.m
 
-mode=21;  % Yale F20
+mode=21.1;  % Yale F20
 % mode=22;  % Yale F20 carbon images
 
 % Default parameters
@@ -97,6 +97,17 @@ switch mode
         startImage=1;
         endImage=1;
 
+    case 21.1  % binned TIFF images.
+        mcDS=1;
+        mi.basePath='/EMWork/Hideki/130422part/LiposomeMerge2kx2k/';
+        mi.imagePath='Micrograph/';
+        overridePixA=3.4;
+        rexp='.+\.tif';              % e.g. xxx.tif
+        infos=meScanHidekiFiles2(mi,3,readIfPresent,rexp);
+        initialDefoci=[1.5 5 10];
+        startImage=1;
+        endImage=inf;
+
     case 22 %             Sequential files, six, Yale F20
         mi.basePath='/Volumes/TetraData/EMWork/Hideki/130629carbon/';
         mi.imagePath='Micrograph/';
@@ -109,7 +120,6 @@ switch mode
         initialDefoci=[.5 1 2 4 8 16];
         startImage=1;
         endImage=inf;
-        
 end;  % switch
 
 %% Main program %%
@@ -255,6 +265,7 @@ for i=startImage:lastImage
         infoFullName=meSaveMiFile(mi);
         disp(['Info file written: ' infoFullName]);
     end;
+    disp(' ');
     infos{i}=mi;  % put the info back into the array
     
 end;

@@ -1,5 +1,5 @@
-function [m pixA ok]=ReadEMFile(name)
-% function [m pixA ok]=ReadEMFile(name)
+function [m, pixA, ok]=ReadEMFile(name)
+% function [m, pixA, ok]=ReadEMFile(name)
 % General image file reader.
 % Based on the file extension, read the image and return the pixel size
 % (in angstroms).  The returned value of pixA is zero if a pixel size is
@@ -9,23 +9,23 @@ function [m pixA ok]=ReadEMFile(name)
 % files to correspond to the Cartesian coordinate convention.
 % This function understands the following extensions:
 % .tif  (generic, or TVIPS files) --rotated 270 degrees
-% .dm3
+% .dm3, .dm4
 % .mrc
 % .hed, .img
 % .jpg   --rotated 270 degrees
 % If the file has the wrong extension, m is returned as zeros and ok=0.
-% fs Jan 2011
+% fs Jan 2011, Aug 2013
 
-[pa nm ex]=fileparts(name);
+[pa, nm, ex]=fileparts(name);
 pixA=0;  % default value
 m=zeros(100,100); % default value
 ok=1;
 switch lower(ex)
     case '.mrc'
-        [m s]=ReadMRC(name);
+        [m, s]=ReadMRC(name);
         pixA=s.rez/s.nx;
-    case '.dm3'
-        [m pixnm]=ReadDM3(name);
+    case {'.dm3','.dm4'}
+        [m, pixnm]=ReadDMFile(name);
         pixA=10*pixnm;
     case '.tif'
         m=rot90(imread(name),3);
