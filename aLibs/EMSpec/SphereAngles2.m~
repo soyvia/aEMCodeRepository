@@ -1,4 +1,4 @@
-function angles=SphereAngles2(ntheta,npsi,nhemi)
+function angles=SphereAngles3(nphi,ntheta,nhemi)
 % function [angles inds]=SphereAngles(ntheta,npsi)
 % Create an array 3 x t of angle values which are ~uniform on a hemisphere,
 %   At each theta value,the number
@@ -8,7 +8,7 @@ function angles=SphereAngles2(ntheta,npsi,nhemi)
 % angles=SphereAngles(18,72);  % 5 degree steps, 813 values
 % angles=SphereAngles( 9,36);  % 10 degree steps, 199 values
 % 
-% Modified so that the theta values go from 0:dtheta:1-dtheta/2 x pi/2.
+% Modified so that the theta values go from 0:dtheta:1-dtheta/2 x 90.
 % fs 10 Mar 2012
 
 if nargin<3
@@ -18,16 +18,16 @@ nthetaM1=ntheta-1;  % there will be 1 more than this number of theta steps
 
 angles=[];
 t=0;
-dtheta=pi/2/(nthetaM1+.5);
+dtheta=180/(nthetaM1+.5);
 
 for i=1:ntheta*nhemi
-    % Assigning theta and psi values:
+    % Assigning theta and pji values:
     theta=(i-1)*dtheta;
 
-    NPsiSteps=min(npsi,sin(theta)*npsi+1);
-    for j=1:NPsiSteps
+    NPhiSteps=min(npsi,sin(theta)*npsi+1);
+    for j=1:NPhiSteps
         % psi values are (j-1)*NPsiSteps*2*pi for j=1..NPsiSteps
-        psi=(j-1)/NPsiSteps*2*pi;
+        psi=(j-1)/NPhiSteps*2*pi;
         % nangles=nangles+1;
         t=t+1;
         angles(t,:)=[0 theta psi];

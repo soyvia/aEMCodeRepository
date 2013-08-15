@@ -1,23 +1,25 @@
-function rvol=OversamplingReconstr3(FourierStack,angles,symmetry)
-% function vol=OversamplingReconstr3(FourierStack,angles,symmetry)
+function rvol=OversamplingReconstr3(FourierStack,angles)
+% function vol=OversamplingReconstr3(FourierStack,angles)
 % Given a stack of nim Fourier transforms of projections (origin in the
 % center, n x n pixels each)
 % and a 3 x nim matrix of corresponding Euler angles, insert these
 % projections into an oversampled 3D volume.  The volume is then downsampled
 % to n^3, and the real-space backprojected volume is returned.
 % The image size n must be even.
+% Angles are in degrees, [phi theta psi]
 
-% % test code
+% % % test code
 % n=80;
-% nim=300;
+% nim=100;
 % FourierStack=zeros(n,n,nim);
 % FourierStack(:,:,1)=fuzzymask(n,2,n/2-2,2);
-% angles=zeros(3,nim);
+% angles=zeros(nim,3);
 % for i=1:nim
 %     FourierStack(:,:,i)=FourierStack(:,:,1);
-%     angles(2,i)=0.2*(i-1);
+%     angles(i,2)=180*rand;
+%     angles(i,1)=360*rand;
 % end;
-
+% 
 
 [n n2 nim]=size(FourierStack);
 ovs=4;  % oversampling factor
@@ -32,14 +34,17 @@ ct2=nx/2;  % center offset in oversampled volume
 
 for i=1:nim  % accumulate all the planes
     img=FourierStack(:,:,i);
-    angs=angles(i,:);
-    for j=0:symmetry-1
-        sangs=angs;
-        sangs(1)=angs(1)+2*pi*j/symmetry;
+    sangs=angles(i,:);
+%     sangs=-angs;
+%     sangs(1)=-angs(3);
+%     sangs(3)=-angs(1);
+%     sangs(1)=-sangs(1);
+%     for j=0:symmetry-1
+%         sangs=angs;
+%         sangs(1)=angs(1)+2*pi*j/symmetry;
 
-% We take the inverse matrix because we are rotating the plane, not the
-% coordinate system.
-    r=inv(EulerMatrix(sangs));  % pick up phi and theta
+% We are rotating the coordinate system.
+    r=(EulerMatrixStandard(sangs*pi/180));  % pick up phi and theta
     X=r(1,1)*x+r(1,2)*y;
     Y=r(2,1)*x+r(2,2)*y;
     Z=r(3,1)*x+r(3,2)*y;
@@ -52,8 +57,10 @@ for i=1:nim  % accumulate all the planes
     % the volume is affected by more than one plane pixel.  This makes the
     % accumulation code in Matlab very simple.
     volx(P)=volx(P)+img(pts);
-    end;
+%     end;
 end;
 rvolx=fftshift(ifftn(ifftshift(volx))); % go to real space
 % rvolx=fftshift(ifftn((volx))); % go to real space
 rvol=Crop(rvolx,n);         % extract the center
+
+% ShowSections(rvol);
