@@ -277,7 +277,7 @@ if (~isfield(mi.vesicle,'ok')...
         && size(mi.vesicle.ok,1)==nv)
     mi.vesicle.ok=true(nv,1);
 end;
-if size(mi.vesicle.ok,2)<4
+if size(mi.vesicle.ok,2)<4 && nv>0
     mi.vesicle.ok(nv,4)=false;  % extend the array
 end;
 
@@ -357,6 +357,9 @@ h.rawImage=DownsampleGeneral(h.origImage,osize(1)/h.dsImage);
 disp('Making model vesicles')
 
 [nv, ne]=size(h.mi.vesicle.ok);
+if ne<4
+    h.mi.vesicle.ok(1,4)=false;  % extend it.
+end;
 
 goodVes=all(h.mi.vesicle.ok(:,1:2),2); % vesicles in range
 badVes=(h.mi.vesicle.ok(:,1) & ~h.mi.vesicle.ok(:,2)); % found, but not in range

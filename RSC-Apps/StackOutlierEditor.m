@@ -1,8 +1,8 @@
 % StackOutlierEditor.m
 % Removes particles from a stack having more than threshSD power in the
 % frequency range from 1/160 to 1/80 angstroms.  The particle images and
-% entries in the si structure are deleted outright; modified files are
-% written with the outPrefix in the name.
+% entries in the si structure are deleted outright.  The modified stack
+% and si structure are written out with the outPrefix added to the name.
 
 outPrefix='e1';
 d0=160;  % angstroms min freqency
@@ -55,7 +55,7 @@ stName=fname{index};
         
 %%         remove particles from stack file and info file
         
-        stackShort=stack;
+stackShort=stack;
         stackShort(:,:,excl)=[];
         
         fields=fieldnames(si);

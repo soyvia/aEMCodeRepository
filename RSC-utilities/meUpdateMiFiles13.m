@@ -35,6 +35,7 @@ for findex=1:nfiles
     disp(['Reading ' mi.procPath mi.baseFilename 'm.mrc']);
         m=ReadMRC([mi.procPath mi.baseFilename 'm.mrc']);
         autoRemerge=false;
+mi.imagePath='Micrograph/';
 
         switch mi.version
             case {11,12}
@@ -125,6 +126,11 @@ for findex=1:nfiles
                     medianVesAmplitude=median(mi.vesicle.s(~isnan(mi.vesicle.s)))
                     autoRemerge= (medianVesAmplitude > .008); % probably old scaling
                 end;
+                if writeMiFile
+                    disp(['Writing ' infoPath fname{findex}]);
+                    save([infoPath fname{findex}],'mi');
+                end;
+
             otherwise
                 disp(['Version number is out of range: ' num2str(mi.version)]);
         end;

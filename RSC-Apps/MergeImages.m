@@ -1,6 +1,6 @@
 % MergeImages.m
 
-mode=21.1;  % Yale F20
+mode=21;  % Yale F20
 % mode=22;  % Yale F20 carbon images
 
 % Default parameters
@@ -84,8 +84,9 @@ switch mode
 %         mi.basePath='/Volumes/TetraData/EMWork/Hideki/130604vesicles/PCPSChol721/';
 %         mi.basePath='/Volumes/TetraData/EMWork/Hideki/DNA-LND/data/FigC/';
 %         doRemoveGoldParticles=1
+mi.basePath='/EMWork/Hideki/130820/Glur2GFP_AuBSAx2dilution/';
         mi.imagePath='Micrograph/';
-        overridePixA=1.7;
+%         overridePixA=1.7;
 %          overridePixA=1.1;
         rexp='.+_\d+\.tif';              % e.g. xxx_123.tif
         rexp='.+\.tif';              % e.g. xxx.tif
@@ -94,9 +95,10 @@ switch mode
         infos=meScanHidekiFiles2(mi,3,readIfPresent,rexp);
         initialDefoci=[1.5 5 10];
 %         initialDefoci=[4 4 4];
-        startImage=1;
-        endImage=1;
-
+        startImage=3;
+        endImage=6;
+overridePixA=2;
+cpe=9;
     case 21.1  % binned TIFF images.
         mcDS=1;
         mi.basePath='/EMWork/Hideki/130422part/LiposomeMerge2kx2k/';

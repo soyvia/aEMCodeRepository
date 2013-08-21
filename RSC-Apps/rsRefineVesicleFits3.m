@@ -78,6 +78,7 @@ for fileIndex=1:numel(fname)
             end;
         else  % the previous model was a good one.
             disp('Using the existing refined membrane model');
+            mname=fname{fileIndex};
             vmGood=1;
             vm=mi;
         end;

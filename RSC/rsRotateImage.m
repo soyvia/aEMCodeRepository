@@ -1,5 +1,5 @@
 function rotImages=rsRotateImage(m,alphas,kernelsize)
-%  Create a stack of rotated images given the input image or image stackm.
+%  Create a stack of rotated images given the input image or image stack m.
 %  The size of m must be either n x n or n x n x numel(alphas).  n must be
 %  divisible by 4.
 %  Each image is rotated cw by an angle alpha, given in degrees.
@@ -17,11 +17,11 @@ if nargin<3
     kernelsize=5;
 end;
 
-[n n1 nim]=size(m);
+mSize=size(m);
+n=mSize(1);
+nim=numel(m)/n^2;
+
 nAlphas=numel(alphas);
-if n~=n1
-    error('Images must be square');
-end;
 if nim~=1 && nim~=nAlphas
     error('Image stack must contain either 1 or numel(alphas) images.');
 end;
@@ -36,7 +36,7 @@ rotImages=single(zeros(n,n,nAlphas));
 
 nw=kernelsize;
 
-[w1 ov]=gridMakeKaiserTable(kernelsize,'grid');
+[w1, ov]=gridMakeKaiserTable(kernelsize,'grid');
 w1=w1';
 
 wcomp=gridMakePreComp(n,nw);

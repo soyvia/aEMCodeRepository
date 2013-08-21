@@ -13,12 +13,11 @@ if nr ~= n % need to change the size of the refs
 end;
 xytfr=MRAlign(stack,refs,3);
 sp.trans=xytfr(:,1:2)*ds;  % translations are in pixels of original stack
-sp.rot=xytfr(:,3)*180/pi;  % in degrees
+sp.rot=xytfr(:,3);  % in degrees
 sp.flip=xytfr(:,4);
 sp.class=xytfr(:,5);
 sp.cc=xytfr(:,6);
 
 if nargout>1 % if the user requested the aligned stack
-%     aliImgs=TransformImages(stack,xytfr);
-    [sp0 aliImgs]=spTransformStack(stack,sp);
+    aliImgs=spTransformStack(stack,sp);
 end;

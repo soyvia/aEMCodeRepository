@@ -2,13 +2,13 @@
 
 membraneOffsetA = -70;  % Membrane center is this distance from particle center
 localVarRadius=100;  % angstroms
-maskPaddingA=20;     % extra space around outer radius, should be greater than maxBob in picker.
+maskPaddingA=70;     % extra space around outer radius, should be greater than maxBob in picker.
 
 outputImageSize=1024;  % size of output images.
-nterms=32;
+nterms=28;
 
 
-showTemplates=0;
+showTemplates=1;
 simulateImage=0;
 
 mapName='/Volumes/TetraData/Structures/AMPAR/3KG2map58.mrc';
@@ -129,7 +129,7 @@ for fileIndex=1:numel(fname); % Operate on a single micrograph
     %% Filter the templates according to the CTF
     [nt, nt, nHemi, nGamma, nHemiAngles]=size(allTemplates);
     nAngles=nHemi*nGamma*nHemiAngles;
-    ne=NextNiceNumber(nt*1.2);  % increase the size to allow CTF rings
+    ne=NextNiceNumber(nt*1.3);  % increase the size to allow CTF rings
     ctf=meGetEffectiveCTF(mi,ne,ds);  % put in dqe, pw filter.
     if useNoiseWhitening
         h=meGetNoiseWhiteningFilter(mi,ne,ds);
@@ -165,22 +165,23 @@ for fileIndex=1:numel(fname); % Operate on a single micrograph
     
     if showTemplates
         %%  % Show the templates and the reconstructions
+%         in alternating order, in the stack rImgAlt.
         timgs=reshape(eigenSet.imgs,ne*ne,nterms);
         nG=1;
         nH=2;
         nAngs=nHemiAngles;
-        rImg=single(zeros(ne,ne,2*nH,nG,nAngs));
+        rImgAlt=single(zeros(ne,ne,2*nH,nG,nAngs));
         for k=1:nHemiAngles
             for j=1:nG
                 for i=1:nH
                     %             rImg(:,:,2*i-1,j,k)=reshape(timgs*eigenSet.vList(:,i,j,k),ne,ne).*squeeze(eigenSet.ampList(i,j,k));
-                    rImg(:,:,2*i-1,j,k)=reshape(timgs*eigenSet.vList(:,i,j,k),ne,ne);
-                    rImg(:,:,2*i,j,k)=xTemplates(:,:,i,j,k);
+                    rImgAlt(:,:,2*i-1,j,k)=reshape(timgs*eigenSet.vList(:,i,j,k),ne,ne);
+                    rImgAlt(:,:,2*i,j,k)=xTemplates(:,:,i,j,k);
                 end;
             end;
         end;
         figure(1);
-        ImagicDisplay2(rImg,2);
+        ImagicDisplay2(rImgAlt,2);
         
         %%  % Make a complete set of reconstructions for comparison
         %   and make the average power spectrum
